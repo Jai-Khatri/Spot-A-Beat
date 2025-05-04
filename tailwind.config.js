@@ -1,8 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  server: {
-    port: 3000, 
-  },
   darkMode: 'class',
   content: [
     "./index.html",
