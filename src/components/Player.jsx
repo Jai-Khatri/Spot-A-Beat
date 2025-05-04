@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Controls from './Controls';
 import ProgressBar from './ProgressBar';
 import VolumeControl from './VolumeControl';
+import PlayerOptions from './PlayerOptions';
 import songs from '../data/songs';
 
 const Player = () => {
@@ -9,15 +10,9 @@ const Player = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [songIndex, setSongIndex] = useState(0);
+  const [isLoop, setIsLoop] = useState(true);
+  const [isShuffle, setIsShuffle] = useState(false);
   const audioRef = useRef(null);
-
-  <img
-  src={songs[songIndex].cover}
-  alt="Album Cover"
-  className={`w-48 h-48 rounded-lg shadow-lg mb-6 transition-transform duration-500 ${
-    isPlaying ? 'animate-beat' : ''
-  }`}
-  />
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -28,18 +23,24 @@ const Player = () => {
 
     audio.addEventListener('loadedmetadata', updateMetadata);
     audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('ended', handleSongEnd);
 
     return () => {
       audio.removeEventListener('loadedmetadata', updateMetadata);
       audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('ended', handleSongEnd);
     };
-  }, [songIndex]);
+  }, [songIndex, isLoop, isShuffle]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    isPlaying ? audio.pause() : audio.play();
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
+    }
     setIsPlaying(!isPlaying);
   };
 
@@ -50,26 +51,25 @@ const Player = () => {
   };
 
   const nextSong = () => {
-    const nextIndex = (songIndex + 1) % songs.length;
-    setSongIndex(nextIndex);
-    setTimeout(() => {
-      if (audioRef.current) {
-        audioRef.current.play();
-        setIsPlaying(true);
+    setSongIndex((prevIndex) => {
+      if (isShuffle) {
+        let next;
+        do {
+          next = Math.floor(Math.random() * songs.length);
+        } while (next === prevIndex);
+        return next;
+      } else {
+        return (prevIndex + 1) % songs.length;
       }
-    }, 0);
+    });
+    setIsPlaying(true);
   };
-  
-  
+
   const prevSong = () => {
-    setIsPlaying(false); 
     setSongIndex((prevIndex) =>
       prevIndex === 0 ? songs.length - 1 : prevIndex - 1
     );
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0; 
-    }
+    setIsPlaying(true);
   };
 
   const handleSeek = (val) => {
@@ -79,10 +79,21 @@ const Player = () => {
 
   const handleVolume = (volume) => {
     if (audioRef.current) {
-      audioRef.current.volume = volume; 
+      audioRef.current.volume = volume;
     }
   };
-  
+
+  const handleSongEnd = () => {
+    if (isLoop) {
+      
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+    } else if (isShuffle || songIndex < songs.length - 1) {
+      nextSong();
+    } else {
+      setIsPlaying(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-lg bg-[#2C3E50] dark:bg-[#111827] text-white dark:text-gray-200 p-8 rounded-xl shadow-2xl flex flex-col items-center">
@@ -100,7 +111,7 @@ const Player = () => {
         }`}
       />
 
-      <audio ref={audioRef} src={songs[songIndex].src} />
+      <audio ref={audioRef} src={songs[songIndex].src} autoPlay={isPlaying} />
 
       <Controls
         isPlaying={isPlaying}
@@ -121,6 +132,13 @@ const Player = () => {
       </div>
 
       <VolumeControl onVolumeChange={handleVolume} />
+
+      <PlayerOptions
+        isLoop={isLoop}
+        isShuffle={isShuffle}
+        onToggleLoop={() => setIsLoop(!isLoop)}
+        onToggleShuffle={() => setIsShuffle(!isShuffle)}
+      />
     </div>
   );
 };
