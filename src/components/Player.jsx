@@ -49,8 +49,29 @@ const Player = () => {
     return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
   };
 
-  const nextSong = () => setSongIndex((prev) => (prev + 1) % songs.length);
-  const prevSong = () => setSongIndex((prev) => (prev === 0 ? songs.length - 1 : prev - 1));
+  const nextSong = () => {
+    const nextIndex = (songIndex + 1) % songs.length;
+    setSongIndex(nextIndex);
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }, 0);
+  };
+  
+  
+  const prevSong = () => {
+    setIsPlaying(false); 
+    setSongIndex((prevIndex) =>
+      prevIndex === 0 ? songs.length - 1 : prevIndex - 1
+    );
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0; 
+    }
+  };
+
   const handleSeek = (val) => {
     audioRef.current.currentTime = val;
     setCurrentTime(val);
